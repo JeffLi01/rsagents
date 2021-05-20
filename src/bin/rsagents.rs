@@ -15,9 +15,9 @@ pub struct Agent {
 }
 
 #[derive(Copy, Clone)]
-pub struct HitCounter;
+pub struct Agents;
 
-impl Key for HitCounter { type Value = Vec<Agent>; }
+impl Key for Agents { type Value = Vec<Agent>; }
 
 fn main() {
     let mut router = Router::new();
@@ -26,14 +26,14 @@ fn main() {
 
     let mut chain = Chain::new(router);
     let agents: Vec<Agent> = Vec::new();
-    chain.link(State::<HitCounter>::both(agents));
+    chain.link(State::<Agents>::both(agents));
 
     println!("Serving on http://localhost:3000...");
     Iron::new(chain).http("localhost:3000").unwrap();
 }
 
 fn list(req: &mut Request) -> IronResult<Response> {
-    let rwlock = req.get::<State<HitCounter>>().unwrap();
+    let rwlock = req.get::<State<Agents>>().unwrap();
     let agents = rwlock.read().unwrap();
 
     let mut response = Response::new();
@@ -56,7 +56,7 @@ fn list(req: &mut Request) -> IronResult<Response> {
 }
 
 fn update(req: &mut Request) -> IronResult<Response> {
-    let rwlock = req.get::<State<HitCounter>>().unwrap();
+    let rwlock = req.get::<State<Agents>>().unwrap();
     let mut agents = rwlock.write().unwrap();
 
     let mut response = Response::new();
