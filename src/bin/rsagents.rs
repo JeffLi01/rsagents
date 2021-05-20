@@ -21,7 +21,7 @@ pub struct Agent {
 #[derive(Copy, Clone)]
 pub struct Agents;
 
-pub fn readable_duration(duration: Duration) -> String
+pub fn readable_duration(duration: &Duration) -> String
 {
     let seconds = duration.as_secs();
     if seconds < 60 {
@@ -60,11 +60,17 @@ pub fn to_html(agents: &RwLockReadGuard<'_, Vec<Agent>>) -> String
         content.push_str(format!("<td>{}</td>", agent.name).as_ref());
         content.push_str(format!("<td>{}</td>", agent.ip).as_ref());
         content.push_str(format!("<td>{}</td>", agent.bmc_ip).as_ref());
+        let mut bg_color = "#ff0000";
         let duration = match now.duration_since(agent.timestamp) {
-            Ok(duration) => format!("{} ago", readable_duration(duration)),
+            Ok(duration) => {
+                if duration.as_secs() < 20 * 60 {
+                    bg_color = "#00cc00";
+                }
+                format!("{} ago", readable_duration(&duration))
+            }
             Err(_) => format!("SystemTime before last update")
         };
-        content.push_str(format!("<td>{}</td>", duration).as_ref());
+        content.push_str(format!(r#"<td bgcolor="{}"">{}</td>"#, bg_color, duration).as_ref());
         content.push_str("</tr>");
     }
     content.push_str("</table>");
