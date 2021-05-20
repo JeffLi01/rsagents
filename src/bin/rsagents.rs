@@ -7,6 +7,7 @@ use persistent::{State};
 use router::Router;
 use urlencoded::UrlEncodedBody;
 use std::sync::RwLockReadGuard;
+use std::time::{Duration, SystemTime};
 
 #[derive(Debug)]
 pub struct Agent {
@@ -14,13 +15,33 @@ pub struct Agent {
     name: String,
     ip: String,
     bmc_ip: String,
+    timestamp: SystemTime,
 }
 
 #[derive(Copy, Clone)]
 pub struct Agents;
 
+pub fn readable_duration(duration: Duration) -> String
+{
+    let seconds = duration.as_secs();
+    if seconds < 60 {
+        return format!("{} seconds", seconds)
+    }
+    let minutes = seconds / 60;
+    if minutes < 60 {
+        return format!("{} minutes", minutes)
+    }
+    let hours = minutes / 60;
+    if hours < 24 {
+        return format!("{} hours", hours)
+    }
+    let days = hours / 24;
+    return format!("{} days", days)
+}
+
 pub fn to_html(agents: &RwLockReadGuard<'_, Vec<Agent>>) -> String
 {
+    let now = SystemTime::now();
     let mut content = "<title>Agents</title>".to_string();
     content.push_str(r#"<table border="1">"#);
     content.push_str("<tr>");
@@ -29,6 +50,7 @@ pub fn to_html(agents: &RwLockReadGuard<'_, Vec<Agent>>) -> String
     content.push_str(format!("<th>{}</th>", "Name").as_ref());
     content.push_str(format!("<th>{}</th>", "IP").as_ref());
     content.push_str(format!("<th>{}</th>", "BMC IP").as_ref());
+    content.push_str(format!("<th>{}</th>", "Last Update").as_ref());
     content.push_str("</tr>");
     for index in 0 .. agents.len() {
         let agent = &agents[index];
@@ -38,6 +60,11 @@ pub fn to_html(agents: &RwLockReadGuard<'_, Vec<Agent>>) -> String
         content.push_str(format!("<td>{}</td>", agent.name).as_ref());
         content.push_str(format!("<td>{}</td>", agent.ip).as_ref());
         content.push_str(format!("<td>{}</td>", agent.bmc_ip).as_ref());
+        let duration = match now.duration_since(agent.timestamp) {
+            Ok(duration) => format!("{} ago", readable_duration(duration)),
+            Err(_) => format!("SystemTime before last update")
+        };
+        content.push_str(format!("<td>{}</td>", duration).as_ref());
         content.push_str("</tr>");
     }
     content.push_str("</table>");
@@ -120,7 +147,8 @@ fn update(req: &mut Request) -> IronResult<Response> {
         Some(bmc_ips) => bmc_ips[0].clone()
     };
 
-    let new_agent = Agent{guid, name, ip, bmc_ip};
+    let timestamp = SystemTime::now();
+    let new_agent = Agent{guid, name, ip, bmc_ip, timestamp};
     let mut old_index = 0;
     for index in 0 .. agents.len() {
         let agent = &agents[index];
