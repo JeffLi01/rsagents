@@ -10,6 +10,7 @@ use std::sync::RwLockReadGuard;
 
 #[derive(Debug)]
 pub struct Agent {
+    guid: String,
     name: String,
     ip: String,
     bmc_ip: String,
@@ -22,12 +23,22 @@ pub fn to_html(agents: &RwLockReadGuard<'_, Vec<Agent>>) -> String
 {
     let mut content = "<title>Agents</title>".to_string();
     content.push_str(r#"<table border="1">"#);
-    let part = format!("<tr><th>{}</th><th>{}</th><th>{}</th><th>{}</th></tr>", "Index", "Name", "IP", "BMC IP");
-    content.push_str(&part);
+    content.push_str("<tr>");
+    content.push_str(format!("<th>{}</th>", "Index").as_ref());
+    content.push_str(format!("<th>{}</th>", "GUID").as_ref());
+    content.push_str(format!("<th>{}</th>", "Name").as_ref());
+    content.push_str(format!("<th>{}</th>", "IP").as_ref());
+    content.push_str(format!("<th>{}</th>", "BMC IP").as_ref());
+    content.push_str("</tr>");
     for index in 0 .. agents.len() {
         let agent = &agents[index];
-        let part = format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>", index, agent.name, agent.ip, agent.bmc_ip);
-        content.push_str(&part);
+        content.push_str("<tr>");
+        content.push_str(format!("<td>{}</td>", index).as_ref());
+        content.push_str(format!("<td>{}</td>", agent.guid).as_ref());
+        content.push_str(format!("<td>{}</td>", agent.name).as_ref());
+        content.push_str(format!("<td>{}</td>", agent.ip).as_ref());
+        content.push_str(format!("<td>{}</td>", agent.bmc_ip).as_ref());
+        content.push_str("</tr>");
     }
     content.push_str("</table>");
     content
@@ -86,6 +97,15 @@ fn update(req: &mut Request) -> IronResult<Response> {
         Some(names) => names[0].clone()
     };
 
+    let guid = match form_data.get("guid") {
+        None => {
+            response.set_mut(status::BadRequest);
+            response.set_mut(format!("form data has no 'guid' parameter\n"));
+            return Ok(response);
+        }
+        Some(guids) => guids[0].clone()
+    };
+
     let ip = match form_data.get("ip") {
         None => {
             response.set_mut(status::BadRequest);
@@ -100,11 +120,18 @@ fn update(req: &mut Request) -> IronResult<Response> {
         Some(bmc_ips) => bmc_ips[0].clone()
     };
 
-    let agent = Agent{
-        name: name,
-        ip: ip,
-        bmc_ip: bmc_ip,
-    };
-    agents.push(agent);
+    let new_agent = Agent{guid, name, ip, bmc_ip};
+    let mut old_index = 0;
+    for index in 0 .. agents.len() {
+        let agent = &agents[index];
+        if agent.guid == new_agent.guid {
+            break;
+        }
+        old_index += 1;
+    }
+    if old_index < agents.len() {
+        agents.remove(old_index);
+    }
+    agents.insert(0, new_agent);
     Ok(Response::with((status::Ok, format!("Agents: {:#?}", *agents))))
 }
