@@ -6,6 +6,7 @@ use mime::*;
 use persistent::{State};
 use router::Router;
 use urlencoded::UrlEncodedBody;
+use std::sync::RwLockReadGuard;
 
 #[derive(Debug)]
 pub struct Agent {
@@ -16,6 +17,21 @@ pub struct Agent {
 
 #[derive(Copy, Clone)]
 pub struct Agents;
+
+pub fn to_html(agents: &RwLockReadGuard<'_, Vec<Agent>>) -> String
+{
+    let mut content = "<title>Agents</title>".to_string();
+    content.push_str(r#"<table border="1">"#);
+    let part = format!("<tr><th>{}</th><th>{}</th><th>{}</th><th>{}</th></tr>", "Index", "Name", "IP", "BMC IP");
+    content.push_str(&part);
+    for index in 0 .. agents.len() {
+        let agent = &agents[index];
+        let part = format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>", index, agent.name, agent.ip, agent.bmc_ip);
+        content.push_str(&part);
+    }
+    content.push_str("</table>");
+    content
+}
 
 impl Key for Agents { type Value = Vec<Agent>; }
 
@@ -40,16 +56,7 @@ fn list(req: &mut Request) -> IronResult<Response> {
 
     response.set_mut(status::Ok);
     response.set_mut(mime!(Text/Html; Charset=Utf8));
-    let mut content = "<title>Agents</title>".to_string();
-    content.push_str(r#"<table border="1">"#);
-    let part = format!("<tr><th>{}</th><th>{}</th><th>{}</th><th>{}</th></tr>", "Index", "Name", "IP", "BMC IP");
-    content.push_str(&part);
-    for index in 0 .. agents.len() {
-        let agent = &agents[index];
-        let part = format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>", index, agent.name, agent.ip, agent.bmc_ip);
-        content.push_str(&part);
-    }
-    content.push_str("</table>");
+    let content = to_html(&agents);
     response.set_mut(content);
 
     Ok(response)
