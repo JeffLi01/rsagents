@@ -23,26 +23,35 @@ pub struct Agents;
 
 pub fn readable_duration(duration: &Duration) -> String
 {
-    let seconds = duration.as_secs();
-    if seconds < 60 {
-        return format!("{} seconds", seconds)
-    }
-    let minutes = seconds / 60;
-    if minutes < 60 {
-        return format!("{} minutes", minutes)
-    }
-    let hours = minutes / 60;
-    if hours < 24 {
-        return format!("{} hours", hours)
-    }
+    let mut seconds = duration.as_secs();
+    let mut minutes = seconds / 60;
+    seconds %= 60;
+    let mut hours = minutes / 60;
+    minutes %= 60;
     let days = hours / 24;
-    return format!("{} days", days)
+    hours %= 24;
+
+    let mut content = String::new();
+    if days > 0 {
+        content.push_str(format!("{}d", days).as_ref());
+    }
+    if hours > 0 {
+        content.push_str(format!("{}h", hours).as_ref());
+    }
+    if minutes > 0 {
+        content.push_str(format!("{}m", minutes).as_ref());
+    }
+    if seconds > 0 || content.len() == 0 {
+        content.push_str(format!("{}s", seconds).as_ref());
+    }
+    content
 }
 
 pub fn to_html(agents: &RwLockReadGuard<'_, Vec<Agent>>) -> String
 {
     let now = SystemTime::now();
     let mut content = "<title>Agents</title>".to_string();
+    content.push_str(r#"<meta http-equiv="refresh" content="10">"#);
     content.push_str(r#"<table border="1">"#);
     content.push_str("<tr>");
     content.push_str(format!("<th>{}</th>", "Index").as_ref());
@@ -88,8 +97,8 @@ fn main() {
     let agents: Vec<Agent> = Vec::new();
     chain.link(State::<Agents>::both(agents));
 
-    println!("Serving on http://localhost:3000...");
-    Iron::new(chain).http("localhost:3000").unwrap();
+    println!("Serving on http://localhost:3000/agents..., DO NOT CLOSE");
+    Iron::new(chain).http("0.0.0.0:3000").unwrap();
 }
 
 fn list(req: &mut Request) -> IronResult<Response> {
