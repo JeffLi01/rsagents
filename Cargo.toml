@@ -1,6 +1,6 @@
 [package]
 name = "rsagents"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jeff Li <lijinfeng01@inspur.com>"]
 edition = "2018"
 
@@ -12,3 +12,6 @@ mime = "0.2.3"
 router = "0.5.1"
 urlencoded = "0.5.0"
 persistent = "0.4.0"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"

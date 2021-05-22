@@ -1,7 +1,8 @@
 use std::time::{Duration, SystemTime};
 use iron::typemap::Key;
+use serde_derive::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Agent {
     pub guid: String,
     pub name: String,
@@ -10,7 +11,7 @@ pub struct Agent {
     pub timestamp: SystemTime,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Agents {
     agents: Vec<Agent>,
 }
@@ -65,6 +66,12 @@ impl Agents {
         content.push_str("</table>");
         content
     }
+
+    pub fn to_json(&self) -> String
+    {
+        serde_json::to_string(self).unwrap()
+    }
+
     pub fn update(&mut self, new_agent: &Agent)
     {
         let mut old_index = 0;

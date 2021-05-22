@@ -1,4 +1,4 @@
-use iron::Plugin;
+use iron::headers::{Accept};
 use iron::prelude::*;
 use iron::status;
 use mime::*;
@@ -15,8 +15,19 @@ pub fn list(req: &mut Request) -> IronResult<Response> {
     let mut response = Response::new();
 
     response.set_mut(status::Ok);
-    response.set_mut(mime!(Text/Html; Charset=Utf8));
-    let content = agents.to_html();
+    let accept = req.headers.get::<Accept>().unwrap();
+    println!("{}", accept);
+    let content;
+    match req.headers.get::<Accept>() {
+        Some(accept) if *accept == Accept::json() => {
+            response.set_mut(mime!(Text/Json; Charset=Utf8));
+            content = agents.to_json();
+        }
+        _ => {
+            response.set_mut(mime!(Text/Html; Charset=Utf8));
+            content = agents.to_html();
+        }
+    }
     response.set_mut(content);
 
     Ok(response)
