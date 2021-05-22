@@ -66,6 +66,21 @@ impl Agents {
         content.push_str("</table>");
         content
     }
+    pub fn update(&mut self, new_agent: &Agent)
+    {
+        let mut old_index = 0;
+        for index in 0 .. self.agents.len() {
+            let agent = &self.agents[index];
+            if agent.guid == new_agent.guid {
+                break;
+            }
+            old_index += 1;
+        }
+        if old_index < self.agents.len() {
+            self.agents.remove(old_index);
+        }
+        self.agents.insert(0, new_agent.clone());
+    }
 }
 
 pub fn readable_duration(duration: &Duration) -> String
@@ -175,17 +190,6 @@ fn update(req: &mut Request) -> IronResult<Response> {
 
     let timestamp = SystemTime::now();
     let new_agent = Agent{guid, name, ip, bmc_ip, timestamp};
-    let mut old_index = 0;
-    for index in 0 .. rwlock_agents.agents.len() {
-        let agent = &rwlock_agents.agents[index];
-        if agent.guid == new_agent.guid {
-            break;
-        }
-        old_index += 1;
-    }
-    if old_index < rwlock_agents.agents.len() {
-        rwlock_agents.agents.remove(old_index);
-    }
-    rwlock_agents.agents.insert(0, new_agent);
+    rwlock_agents.update(&new_agent);
     Ok(Response::with((status::Ok, format!("Agents: {:#?}", rwlock_agents.agents))))
 }
