@@ -6,10 +6,9 @@ use mime::*;
 use persistent::{State};
 use router::Router;
 use urlencoded::UrlEncodedBody;
-use std::sync::RwLockReadGuard;
 use std::time::{Duration, SystemTime};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Agent {
     guid: String,
     name: String,
@@ -18,8 +17,56 @@ pub struct Agent {
     timestamp: SystemTime,
 }
 
-#[derive(Copy, Clone)]
-pub struct Agents;
+#[derive(Clone, Debug)]
+pub struct Agents {
+    agents: Vec<Agent>,
+}
+
+impl Agents {
+    pub fn new() -> Self
+    {
+        let agents: Vec<Agent> = vec![];
+        Agents{agents}
+    }
+    pub fn to_html(&self) -> String
+    {
+        let now = SystemTime::now();
+        let mut content = "<title>Agents</title>".to_string();
+        content.push_str(r#"<meta http-equiv="refresh" content="10">"#);
+        content.push_str(r#"<table border="1">"#);
+        content.push_str("<tr>");
+        content.push_str(format!("<th>{}</th>", "Index").as_ref());
+        content.push_str(format!("<th>{}</th>", "GUID").as_ref());
+        content.push_str(format!("<th>{}</th>", "Name").as_ref());
+        content.push_str(format!("<th>{}</th>", "IP").as_ref());
+        content.push_str(format!("<th>{}</th>", "BMC IP").as_ref());
+        content.push_str(format!("<th>{}</th>", "Last Update").as_ref());
+        content.push_str("</tr>");
+        for index in 0 .. self.agents.len() {
+            let agent = &self.agents[index];
+            content.push_str("<tr>");
+            content.push_str(format!("<td>{}</td>", index).as_ref());
+            content.push_str(format!("<td>{}</td>", agent.guid).as_ref());
+            content.push_str(format!("<td>{}</td>", agent.name).as_ref());
+            content.push_str(format!("<td>{}</td>", agent.ip).as_ref());
+            content.push_str(format!("<td>{}</td>", agent.bmc_ip).as_ref());
+            let mut bg_color = "#ff0000";
+            let duration = match now.duration_since(agent.timestamp) {
+                Ok(duration) => {
+                    if duration.as_secs() < 20 * 60 {
+                        bg_color = "#00cc00";
+                    }
+                    format!("{} ago", readable_duration(&duration))
+                }
+                Err(_) => format!("SystemTime before last update")
+            };
+            content.push_str(format!(r#"<td bgcolor="{}"">{}</td>"#, bg_color, duration).as_ref());
+            content.push_str("</tr>");
+        }
+        content.push_str("</table>");
+        content
+    }
+}
 
 pub fn readable_duration(duration: &Duration) -> String
 {
@@ -47,46 +94,10 @@ pub fn readable_duration(duration: &Duration) -> String
     content
 }
 
-pub fn to_html(agents: &RwLockReadGuard<'_, Vec<Agent>>) -> String
-{
-    let now = SystemTime::now();
-    let mut content = "<title>Agents</title>".to_string();
-    content.push_str(r#"<meta http-equiv="refresh" content="10">"#);
-    content.push_str(r#"<table border="1">"#);
-    content.push_str("<tr>");
-    content.push_str(format!("<th>{}</th>", "Index").as_ref());
-    content.push_str(format!("<th>{}</th>", "GUID").as_ref());
-    content.push_str(format!("<th>{}</th>", "Name").as_ref());
-    content.push_str(format!("<th>{}</th>", "IP").as_ref());
-    content.push_str(format!("<th>{}</th>", "BMC IP").as_ref());
-    content.push_str(format!("<th>{}</th>", "Last Update").as_ref());
-    content.push_str("</tr>");
-    for index in 0 .. agents.len() {
-        let agent = &agents[index];
-        content.push_str("<tr>");
-        content.push_str(format!("<td>{}</td>", index).as_ref());
-        content.push_str(format!("<td>{}</td>", agent.guid).as_ref());
-        content.push_str(format!("<td>{}</td>", agent.name).as_ref());
-        content.push_str(format!("<td>{}</td>", agent.ip).as_ref());
-        content.push_str(format!("<td>{}</td>", agent.bmc_ip).as_ref());
-        let mut bg_color = "#ff0000";
-        let duration = match now.duration_since(agent.timestamp) {
-            Ok(duration) => {
-                if duration.as_secs() < 20 * 60 {
-                    bg_color = "#00cc00";
-                }
-                format!("{} ago", readable_duration(&duration))
-            }
-            Err(_) => format!("SystemTime before last update")
-        };
-        content.push_str(format!(r#"<td bgcolor="{}"">{}</td>"#, bg_color, duration).as_ref());
-        content.push_str("</tr>");
-    }
-    content.push_str("</table>");
-    content
-}
+#[derive(Clone)]
+pub struct AgentsKey;
 
-impl Key for Agents { type Value = Vec<Agent>; }
+impl Key for AgentsKey { type Value = Agents; }
 
 fn main() {
     let mut router = Router::new();
@@ -94,30 +105,30 @@ fn main() {
     router.post("/agents", update, "update");
 
     let mut chain = Chain::new(router);
-    let agents: Vec<Agent> = Vec::new();
-    chain.link(State::<Agents>::both(agents));
+    let agents = Agents::new();
+    chain.link(State::<AgentsKey>::both(agents));
 
     println!("Serving on http://localhost:3000/agents..., DO NOT CLOSE");
     Iron::new(chain).http("0.0.0.0:3000").unwrap();
 }
 
 fn list(req: &mut Request) -> IronResult<Response> {
-    let rwlock = req.get::<State<Agents>>().unwrap();
-    let agents = rwlock.read().unwrap();
+    let rwlock = req.get::<State<AgentsKey>>().unwrap();
+    let agents = &*rwlock.read().unwrap();
 
     let mut response = Response::new();
 
     response.set_mut(status::Ok);
     response.set_mut(mime!(Text/Html; Charset=Utf8));
-    let content = to_html(&agents);
+    let content = agents.to_html();
     response.set_mut(content);
 
     Ok(response)
 }
 
 fn update(req: &mut Request) -> IronResult<Response> {
-    let rwlock = req.get::<State<Agents>>().unwrap();
-    let mut agents = rwlock.write().unwrap();
+    let rwlock = req.get::<State<AgentsKey>>().unwrap();
+    let mut rwlock_agents = rwlock.write().unwrap();
 
     let mut response = Response::new();
 
@@ -165,16 +176,16 @@ fn update(req: &mut Request) -> IronResult<Response> {
     let timestamp = SystemTime::now();
     let new_agent = Agent{guid, name, ip, bmc_ip, timestamp};
     let mut old_index = 0;
-    for index in 0 .. agents.len() {
-        let agent = &agents[index];
+    for index in 0 .. rwlock_agents.agents.len() {
+        let agent = &rwlock_agents.agents[index];
         if agent.guid == new_agent.guid {
             break;
         }
         old_index += 1;
     }
-    if old_index < agents.len() {
-        agents.remove(old_index);
+    if old_index < rwlock_agents.agents.len() {
+        rwlock_agents.agents.remove(old_index);
     }
-    agents.insert(0, new_agent);
-    Ok(Response::with((status::Ok, format!("Agents: {:#?}", *agents))))
+    rwlock_agents.agents.insert(0, new_agent);
+    Ok(Response::with((status::Ok, format!("Agents: {:#?}", rwlock_agents.agents))))
 }
