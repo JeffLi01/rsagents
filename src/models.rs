@@ -31,7 +31,8 @@ impl Agents {
     pub fn to_html(&self) -> String
     {
         let now = SystemTime::now();
-        let mut content = "<title>Agents</title>".to_string();
+        let version = env!("CARGO_PKG_VERSION");
+        let mut content = format!("<title>Agents-v{}</title>", version);
         content.push_str(r#"<meta http-equiv="refresh" content="10">"#);
         content.push_str(r#"<table border="1">"#);
         content.push_str("<tr>");
