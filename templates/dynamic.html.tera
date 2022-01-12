@@ -1,0 +1,6 @@
+{% extends "base" %}
+
+{% block head %}
+<meta http-equiv="refresh" content="5">
+{{ super() }}
+{% endblock head %}
