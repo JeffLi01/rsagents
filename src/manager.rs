@@ -39,7 +39,7 @@ fn is_port_on(ip: &str, port: u16) -> bool
         Ok(addr) => addr,
         Err(_) => return false,
     };
-    let res = TcpStream::connect_timeout(&addr, Duration::new(0, 1000000));
+    let res = TcpStream::connect_timeout(&addr, Duration::new(1, 0));
     println!("{}: {:?}", addr, res);
     match res {
         Ok(_) => return true,
