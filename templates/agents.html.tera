@@ -19,18 +19,24 @@
           <th>IP</th>
           <th>BMC IP</th>
           <th>Since Last Update</th>
+          <th colspan="5">BMC Services</th>
         </tr>
       </thead>
       <tbody>
         {% for agent in agents -%}
           <tr>
-              <td><input type="checkbox" name="uids" value="{{ agent.guid }}"></td>
+              <td><input type="checkbox" name="uids" value="{{ agent.info.guid }}"></td>
               <td>{{ loop.index }}</td>
-              <td>{{ agent.guid }}</td>
-              <td>{{ agent.name }}</td>
-              <td>{{ agent.ip }}</td>
-              <td>{{ agent.bmc_ip }}</td>
+              <td>{{ agent.info.guid }}</td>
+              <td>{{ agent.info.name }}</td>
+              <td>{{ agent.info.ip }}</td>
+              <td>{{ agent.info.bmc_ip }}</td>
               <td>{{ agent.duration_s }}</td>
+              <td width="50" align="center">{% if agent.services.http %}<a href="http://{{ agent.info.bmc_ip }}">http</a>{% endif %}</td>
+              <td width="50" align="center">{% if agent.services.https %}<a href="http://{{ agent.info.bmc_ip }}">https</a>{% endif %}</td>
+              <td width="50" align="center">{% if agent.services.ssh %}ssh{% endif %}</td>
+              <td width="50" align="center">{% if agent.services.ipmi %}ipmi{% endif %}</td>
+              <td width="50" align="center">{% if agent.services.vnc %}<a href="vnc://{{ agent.info.bmc_ip }}">vnc</a>{% endif %}</td>
             </tr>
         {%- endfor %}
       </tbody>

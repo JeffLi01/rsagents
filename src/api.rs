@@ -9,11 +9,11 @@ use serde_derive::{Deserialize, Serialize};
 use rocket_dyn_templates::Template;
 
 use crate::Managed;
-use crate::manager::{Agent, NewAgent};
+use crate::manager::{Agent, AgentInfo};
 
 
 #[post("/agents", data = "<agent>")]
-pub fn api_agent_create(agent: Form<NewAgent>, state: &State<Managed>) -> Json<Agent>
+pub fn api_agent_create(agent: Form<AgentInfo>, state: &State<Managed>) -> Json<Agent>
 {
     let mut managed = state.write();
     Json(managed.agent_create(agent.into_inner()))
@@ -27,34 +27,17 @@ pub fn api_agent_list(state: &State<Managed>) -> Json<Vec<Agent>>
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AgentStatus {
-    pub guid: String,
-    pub name: String,
-    pub ip: String,
-    pub bmc_ip: String,
-    pub duration_s: u64,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 struct Info {
-    agents: Vec<AgentStatus>,
+    agents: Vec<Agent>,
 }
 
 #[get("/agents", format = "text/html", rank = 2)]
 pub fn api_agent_list_html(state: &State<Managed>) -> Template
 {
     let managed = state.read();
-    let mut agents: Vec<AgentStatus> = vec![];
-    for agent in managed.agent_get_all() {
-        let duration_s = SystemTime::now().duration_since(agent.timestamp).ok().unwrap().as_secs();
-        let agent_status = AgentStatus {
-            guid: agent.guid,
-            name: agent.name,
-            ip: agent.ip,
-            bmc_ip: agent.bmc_ip,
-            duration_s,
-        };
-        agents.push(agent_status);
+    let mut agents = managed.agent_get_all();
+    for agent in &mut agents {
+        agent.duration_s = SystemTime::now().duration_since(agent.timestamp).ok().unwrap().as_secs();
     }
     Template::render("agents", &Info { agents })
 }
