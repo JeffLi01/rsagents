@@ -1,7 +1,9 @@
 
-use std::{sync::{RwLock, RwLockReadGuard, RwLockWriteGuard, Arc}, thread::{self, sleep}, time::Duration};
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard, Arc};
+use std::thread::{self, sleep};
+use std::time::{Duration, Instant};
 
-use rocket::{launch};
+use rocket::launch;
 use rocket_dyn_templates::Template;
 
 use manager::Manager;
@@ -32,10 +34,10 @@ fn update_service_status(managed: Managed)
     loop {
         println!("in update_service_status thread");
         sleep(Duration::new(10, 0));
+        let now = Instant::now();
         let mut manager = managed.write();
-        for agent in manager.agent_get_all_mut() {
-            agent.update_service_status();
-        }
+        manager.update_service_status();
+        println!("update_service_status used {} milliseconds", now.elapsed().as_millis());
     }
 }
 

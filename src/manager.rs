@@ -1,7 +1,11 @@
-use std::{time::{SystemTime, Duration}, net::{SocketAddr, TcpStream}, str::FromStr};
+use std::time::{SystemTime, Duration};
+use std::str::FromStr;
+use std::net::{SocketAddr, TcpStream};
+
 use serde_derive::{Deserialize, Serialize};
 
 use rocket::form::FromForm;
+use rayon::prelude::*;
 
 
 #[derive(FromForm)]
@@ -112,5 +116,13 @@ impl Manager {
         if let Some(index) = self.agents.iter().position(|agent| &agent.info.guid == guid) {
             self.agents.remove(index);
         }
+    }
+
+    pub fn update_service_status(&mut self)
+    {
+        self.agents.par_iter_mut()
+            .for_each(|agent| {
+                agent.update_service_status()
+            });
     }
 }
