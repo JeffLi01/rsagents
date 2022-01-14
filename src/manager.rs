@@ -33,9 +33,10 @@ impl Service {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Agent {
     pub info: AgentInfo,
-    pub timestamp: SystemTime,
+    pub create_time: SystemTime,
     pub duration_s: u64,
     pub services: Vec<Service>,
+    pub service_refresh_time: SystemTime,
 }
 
 fn is_port_on(ip: &str, port: u16) -> bool
@@ -66,9 +67,10 @@ impl Agent {
             ];
         Agent {
             info: agent_info,
-            timestamp: SystemTime::now(),
+            create_time: SystemTime::now(),
             services,
             duration_s: 0,
+            service_refresh_time: SystemTime::now(),
         }
     }
 
@@ -80,7 +82,7 @@ impl Agent {
     }
     pub fn update_service_status(&mut self)
     {
-        let duration = SystemTime::now().duration_since(self.timestamp).ok().unwrap().as_secs();
+        let duration = SystemTime::now().duration_since(self.create_time).ok().unwrap().as_secs();
         if duration > 310 {
             self.clear_service_status();
             return;
@@ -116,6 +118,14 @@ impl Manager {
         self.agents[0].clone()
     }
 
+    pub fn agent_update_service_status(&mut self, guid: &str, services: &[Service])
+    {
+        if let Some(agent) = self.agents.iter_mut().find(|agent| agent.info.guid == guid) {
+            agent.services = services.to_owned();
+            agent.service_refresh_time = SystemTime::now();
+        }
+    }
+
     pub fn agent_get_all(&self) -> Vec<Agent>
     {
         self.agents.clone()
@@ -129,6 +139,11 @@ impl Manager {
     pub fn agent_get(&self, guid: &str) -> Option<Agent>
     {
         self.agents.iter().find(|agent| agent.info.guid == guid).map(|x| x.to_owned())
+    }
+    
+    pub fn agent_get_earliest_refreshed(&self) -> Option<&Agent>
+    {
+        self.agents.iter().min_by_key(|agent| agent.service_refresh_time)
     }
 
     pub fn agent_delete(&mut self, guid: &str)

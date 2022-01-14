@@ -37,7 +37,7 @@ pub fn api_agent_list_html(state: &State<Managed>) -> Template
     let managed = state.read();
     let mut agents = managed.agent_get_all();
     for agent in &mut agents {
-        agent.duration_s = SystemTime::now().duration_since(agent.timestamp).ok().unwrap().as_secs();
+        agent.duration_s = SystemTime::now().duration_since(agent.create_time).ok().unwrap().as_secs();
     }
     Template::render("agents", &Info { agents })
 }

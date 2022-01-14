@@ -34,12 +34,23 @@ fn update_service_status(managed: Managed)
 {
     loop {
         trace!("in update_service_status thread");
+        let manager = managed.read();
+        let agent = manager.agent_get_earliest_refreshed().map(|x| x.to_owned());
+        drop(manager);
+        if agent.is_none() {
+            sleep(Duration::new(1, 0));
+            continue;
+        }
         let now = Instant::now();
+        let mut agent = agent.unwrap();
+        agent.update_service_status();
         let mut manager = managed.write();
-        manager.update_service_status();
+        manager.agent_update_service_status(&agent.info.guid, &agent.services);
         let elapsed = now.elapsed();
         debug!("update_service_status used {} milliseconds", elapsed.as_millis());
-        sleep(Duration::new(10, 0) - elapsed);
+        if elapsed.as_millis() < 1000 {
+            sleep(Duration::new(1, 0) - elapsed);
+        }
     }
 }
 
