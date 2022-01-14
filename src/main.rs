@@ -34,11 +34,12 @@ fn update_service_status(managed: Managed)
 {
     loop {
         trace!("in update_service_status thread");
-        sleep(Duration::new(10, 0));
         let now = Instant::now();
         let mut manager = managed.write();
         manager.update_service_status();
-        debug!("update_service_status used {} milliseconds", now.elapsed().as_millis());
+        let elapsed = now.elapsed();
+        debug!("update_service_status used {} milliseconds", elapsed.as_millis());
+        sleep(Duration::new(10, 0) - elapsed);
     }
 }
 
