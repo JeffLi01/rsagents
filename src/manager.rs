@@ -2,6 +2,7 @@ use std::time::{SystemTime, Duration};
 use std::str::FromStr;
 use std::net::{SocketAddr, TcpStream};
 
+use log::debug;
 use serde_derive::{Deserialize, Serialize};
 
 use rocket::form::FromForm;
@@ -44,7 +45,7 @@ fn is_port_on(ip: &str, port: u16) -> bool
         Err(_) => return false,
     };
     let res = TcpStream::connect_timeout(&addr, Duration::new(1, 0));
-    println!("{}: {:?}", addr, res);
+    debug!("{}: {:?}", addr, res);
     match res {
         Ok(_) => return true,
         Err(_) => return false,
