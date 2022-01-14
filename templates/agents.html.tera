@@ -32,11 +32,9 @@
               <td>{{ agent.info.ip }}</td>
               <td>{{ agent.info.bmc_ip }}</td>
               <td>{{ agent.duration_s }}</td>
-              <td width="50" align="center">{% if agent.services.http %}<a href="http://{{ agent.info.bmc_ip }}">http</a>{% endif %}</td>
-              <td width="50" align="center">{% if agent.services.https %}<a href="http://{{ agent.info.bmc_ip }}">https</a>{% endif %}</td>
-              <td width="50" align="center">{% if agent.services.ssh %}ssh{% endif %}</td>
-              <td width="50" align="center">{% if agent.services.ipmi %}ipmi{% endif %}</td>
-              <td width="50" align="center">{% if agent.services.vnc %}<a href="vnc://{{ agent.info.bmc_ip }}">vnc</a>{% endif %}</td>
+              {% for service in agent.services %}
+                <td width="50" align="center">{% if service.alive %}<a href="{{ service.name }}://{{ agent.info.bmc_ip }}">{{ service.name }}</a>{% endif %}</td>
+              {% endfor %}
             </tr>
         {%- endfor %}
       </tbody>

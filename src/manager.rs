@@ -19,12 +19,14 @@ pub struct AgentInfo {
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct ServiceStatus {
-    pub http: bool,
-    pub https: bool,
-    pub ssh: bool,
-    pub ipmi: bool,
-    pub vnc: bool,
+pub struct Service {
+    pub name: String,
+    pub port: u16,
+    pub alive: bool,
+}
+
+impl Service {
+    pub fn new(name: String, port: u16) -> Self { Self { name, port, alive: false } }
 }
 
 
@@ -33,7 +35,7 @@ pub struct Agent {
     pub info: AgentInfo,
     pub timestamp: SystemTime,
     pub duration_s: u64,
-    pub services: ServiceStatus,
+    pub services: Vec<Service>,
 }
 
 fn is_port_on(ip: &str, port: u16) -> bool
@@ -53,18 +55,40 @@ fn is_port_on(ip: &str, port: u16) -> bool
 }
 
 impl Agent {
+    pub fn new(agent_info: AgentInfo) -> Self
+    {
+        let services = vec![
+            Service::new("http".to_string(), 80),
+            Service::new("https".to_string(), 443),
+            Service::new("ssh".to_string(), 22),
+            Service::new("ipmi".to_string(), 623),
+            Service::new("vnc".to_string(), 5900),
+            ];
+        Agent {
+            info: agent_info,
+            timestamp: SystemTime::now(),
+            services,
+            duration_s: 0,
+        }
+    }
+
+    fn clear_service_status(&mut self)
+    {
+        for service in &mut self.services {
+            service.alive = false;
+        }
+    }
     pub fn update_service_status(&mut self)
     {
         let duration = SystemTime::now().duration_since(self.timestamp).ok().unwrap().as_secs();
         if duration > 310 {
-            self.services = Default::default();
+            self.clear_service_status();
             return;
         }
-        self.services.http = is_port_on(&self.info.bmc_ip, 80);
-        self.services.https = is_port_on(&self.info.bmc_ip, 443);
-        self.services.ssh = is_port_on(&self.info.bmc_ip, 22);
-        self.services.ipmi = is_port_on(&self.info.bmc_ip, 623);
-        self.services.vnc = is_port_on(&self.info.bmc_ip, 5900);
+        self.services.par_iter_mut()
+            .for_each(|service| {
+                service.alive = is_port_on(&self.info.bmc_ip, service.port)
+            });
     }
 }
 
@@ -84,12 +108,7 @@ impl Manager {
 impl Manager {
     pub fn agent_create(&mut self, agent_info: AgentInfo) -> Agent
     {
-        let agent = Agent {
-            info: agent_info,
-            timestamp: SystemTime::now(),
-            services: Default::default(),
-            duration_s: 0,
-        };
+        let agent = Agent::new(agent_info);
         if let Some(_) = self.agent_get(&agent.info.guid) {
             self.agent_delete(&agent.info.guid);
         }
