@@ -111,8 +111,13 @@ impl Manager {
     pub fn agent_create(&mut self, agent_info: AgentInfo) -> Agent
     {
         let agent = Agent::new(agent_info);
-        if let Some(_) = self.agent_get(&agent.info.guid) {
-            self.agent_delete(&agent.info.guid);
+        let mut i = 0;
+        while i < self.agents.len() {
+            if self.agents[i].info.guid == agent.info.guid && self.agents[i].info.name == agent.info.name {
+                self.agents.remove(i);
+            } else {
+                i += 1;
+            }
         }
         self.agents.insert(0, agent);
         self.agents[0].clone()
