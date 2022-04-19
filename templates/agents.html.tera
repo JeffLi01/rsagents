@@ -31,7 +31,7 @@
               <td>{{ agent.info.name }}</td>
               <td>{{ agent.info.ip }}</td>
               <td>{{ agent.info.bmc_ip }}</td>
-              <td>{{ agent.duration_s }}</td>
+              <td bgcolor="{% if agent.duration_s > 300 %}#ff0000{% else %}#00ff00{% endif %}">{{ agent.duration_s }}</td>
               {% for service in agent.services %}
                 <td width="50" align="center">{% if service.alive %}<a href="{{ service.name }}://{{ agent.info.bmc_ip }}">{{ service.name }}</a>{% endif %}</td>
               {% endfor %}
