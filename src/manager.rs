@@ -49,10 +49,7 @@ fn is_port_on(ip: &str, port: u16) -> bool
     };
     let res = TcpStream::connect_timeout(&addr, Duration::new(1, 0));
     debug!("{}: {:?}", addr, res);
-    match res {
-        Ok(_) => return true,
-        Err(_) => return false,
-    }
+    res.is_ok()
 }
 
 impl Agent {
@@ -153,7 +150,7 @@ impl Manager {
 
     pub fn agent_delete(&mut self, guid: &str)
     {
-        if let Some(index) = self.agents.iter().position(|agent| &agent.info.guid == guid) {
+        if let Some(index) = self.agents.iter().position(|agent| agent.info.guid == guid) {
             self.agents.remove(index);
         }
     }
