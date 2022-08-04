@@ -3,10 +3,10 @@
 address = "0.0.0.0"
 limits = { forms = "64 kB", json = "1 MiB" }
 template_dir = "templates"
+port = 3000
 
 
 ## set only when compiled in debug mode, i.e, `cargo build`
 [debug]
-port = 3000
 ## only the `json` key from `default` will be overridden; `forms` will remain
 limits = { json = "10MiB" }
