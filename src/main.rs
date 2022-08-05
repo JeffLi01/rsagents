@@ -46,6 +46,7 @@ fn update_service_status(managed: Managed)
         agent.update_service_status();
         let mut manager = managed.write();
         manager.agent_update_service_status(&agent.info.guid, &agent.services);
+        drop(manager);
         let elapsed = now.elapsed();
         debug!("update_service_status used {} milliseconds", elapsed.as_millis());
         if elapsed.as_millis() < 1000 {
