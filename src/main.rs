@@ -1,5 +1,4 @@
-
-use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard, Arc};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::thread::{self, sleep};
 use std::time::Duration;
 
@@ -12,26 +11,21 @@ use manager::Manager;
 mod api;
 mod manager;
 
-
 pub struct Managed {
     state: Arc<RwLock<Manager>>,
 }
 
 impl Managed {
-    pub fn read(&self) -> RwLockReadGuard<Manager>
-    {
+    pub fn read(&self) -> RwLockReadGuard<Manager> {
         self.state.read().unwrap()
     }
 
-    pub fn write(&self) -> RwLockWriteGuard<Manager>
-    {
+    pub fn write(&self) -> RwLockWriteGuard<Manager> {
         self.state.write().unwrap()
     }
 }
 
-
-fn update_service_status(managed: Managed)
-{
+fn update_service_status(managed: Managed) {
     loop {
         trace!("in update_service_status thread");
         let manager = managed.read();
@@ -57,15 +51,18 @@ fn update_service_status(managed: Managed)
     }
 }
 
-
 #[launch]
 pub fn rocket_app() -> _ {
     env_logger::init();
 
     let state = Arc::new(RwLock::new(Manager::new()));
-    let managed = Managed { state: Arc::clone(&state) };
+    let managed = Managed {
+        state: Arc::clone(&state),
+    };
     thread::spawn(move || update_service_status(managed));
-    let managed = Managed { state: Arc::clone(&state) };
+    let managed = Managed {
+        state: Arc::clone(&state),
+    };
     rocket::build()
         .mount("/", api::get_routes())
         .manage(managed)
