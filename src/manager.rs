@@ -95,6 +95,7 @@ impl Agent {
 #[derive(Clone, Default, Serialize)]
 pub struct Manager {
     pub agents: Vec<Agent>,
+    pub waiting_udate: Vec<String>,
 }
 
 impl Manager {
@@ -116,6 +117,7 @@ impl Manager {
                 i += 1;
             }
         }
+        self.waiting_udate.insert(0, agent.info.guid.clone());
         self.agents.insert(0, agent);
         self.agents[0].clone()
     }
