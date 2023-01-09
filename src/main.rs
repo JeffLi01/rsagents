@@ -28,13 +28,15 @@ impl Managed {
 fn update_service_status(managed: Managed) {
     loop {
         trace!("in update_service_status thread");
+
         let manager = managed.read();
-        if manager.waiting_udate.is_empty() {
-            drop(manager);
+        let is_empty = manager.waiting_udate.is_empty();
+        drop(manager);
+        if is_empty {
             sleep(Duration::new(1, 0));
             continue;
         }
-        drop(manager);
+
         let mut manager = managed.write();
         let guid = manager.waiting_udate.pop().unwrap();
         let agent = manager.agent_get(&guid);
@@ -43,6 +45,7 @@ fn update_service_status(managed: Managed) {
             sleep(Duration::new(1, 0));
             continue;
         }
+
         let mut agent = agent.unwrap();
         agent.update_service_status();
         let mut manager = managed.write();
