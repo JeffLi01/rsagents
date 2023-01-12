@@ -45,3 +45,22 @@ pub fn api_agent_list_html(state: &State<Managed>) -> Template {
 pub fn get_routes() -> Vec<Route> {
     routes![api_agent_create, api_agent_list, api_agent_list_html,]
 }
+
+#[cfg(test)]
+mod test {
+    use crate::rocket_app;
+    use rocket::local::blocking::Client;
+    use rocket::http::{Status, ContentType};
+    use rocket::uri;
+
+    #[test]
+    fn api_agent_create_with_form() {
+        let client = Client::tracked(rocket_app()).expect("valid rocket instance");
+        let response = client
+            .post(uri!(super::api_agent_create))
+            .header(ContentType::Form)
+            .body("guid=guid&name&name&ip&ip&bmc_ip&bmc_ip")
+            .dispatch();
+        assert_eq!(response.status(), Status::Ok);
+    }
+}
