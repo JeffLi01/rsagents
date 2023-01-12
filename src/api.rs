@@ -17,6 +17,12 @@ pub fn api_agent_create(agent: Form<AgentInfo>, state: &State<Managed>) -> Json<
     Json(managed.agent_create(agent.into_inner()))
 }
 
+#[post("/agents", data = "<agent>", format = "application/json", rank = 2)]
+pub fn api_agent_create_with_json(agent: Json<AgentInfo>, state: &State<Managed>) -> Json<Agent> {
+    let mut managed = state.write();
+    Json(managed.agent_create(agent.into_inner()))
+}
+
 #[get("/agents", format = "application/json")]
 pub fn api_agent_list(state: &State<Managed>) -> Json<Vec<Agent>> {
     let managed = state.read();
@@ -43,15 +49,22 @@ pub fn api_agent_list_html(state: &State<Managed>) -> Template {
 }
 
 pub fn get_routes() -> Vec<Route> {
-    routes![api_agent_create, api_agent_list, api_agent_list_html,]
+    routes![
+        api_agent_create,
+        api_agent_create_with_json,
+        api_agent_list,
+        api_agent_list_html,
+    ]
 }
 
 #[cfg(test)]
 mod test {
+    use crate::manager::AgentInfo;
     use crate::rocket_app;
     use rocket::local::blocking::Client;
     use rocket::http::{Status, ContentType};
     use rocket::uri;
+    use serde_json::json;
 
     #[test]
     fn api_agent_create_with_form() {
@@ -60,6 +73,22 @@ mod test {
             .post(uri!(super::api_agent_create))
             .header(ContentType::Form)
             .body("guid=guid&name&name&ip&ip&bmc_ip&bmc_ip")
+            .dispatch();
+        assert_eq!(response.status(), Status::Ok);
+    }
+
+    #[test]
+    fn api_agent_create_with_json() {
+        let client = Client::tracked(rocket_app()).expect("valid rocket instance");
+        let info = AgentInfo {
+            guid: "guid".to_owned(),
+            name: "name".to_owned(),
+            ip: "ip".to_owned(),
+            bmc_ip: "bmc_ip".to_owned(),
+        };
+        let response = client
+            .post(uri!(super::api_agent_create))
+            .json(&json!(info))
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
     }

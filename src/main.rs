@@ -56,7 +56,7 @@ fn update_service_status(managed: Managed) {
 
 #[launch]
 pub fn rocket_app() -> _ {
-    env_logger::init();
+    let _ = env_logger::try_init();
 
     let state = Arc::new(RwLock::new(Manager::new()));
     let managed = Managed {
