@@ -46,9 +46,8 @@ impl From<CoreAgentInfo> for AgentInfo {
 pub struct Agent {
     pub info: AgentInfo,
     pub create_time: SystemTime,
-    pub duration_s: u64,
+    pub duration_since_refresh_s: u64,
     pub services: Vec<Service>,
-    pub service_refresh_time: SystemTime,
 }
 
 impl From<CoreAgent> for Agent {
@@ -56,13 +55,12 @@ impl From<CoreAgent> for Agent {
         Self {
             info: agent.info.into(),
             create_time: agent.create_time,
-            duration_s: SystemTime::now()
-                .duration_since(agent.create_time)
+            duration_since_refresh_s: SystemTime::now()
+                .duration_since(agent.last_refresh)
                 .ok()
                 .unwrap()
                 .as_secs(),
             services: agent.services,
-            service_refresh_time: agent.service_refresh_time,
         }
     }
 }

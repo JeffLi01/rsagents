@@ -36,9 +36,8 @@ impl Service {
 pub struct Agent {
     pub info: AgentInfo,
     pub create_time: SystemTime,
-    pub duration_s: u64,
     pub services: Vec<Service>,
-    pub service_refresh_time: SystemTime,
+    pub last_refresh: SystemTime,
 }
 
 fn is_port_on(ip: &str, port: u16) -> bool {
@@ -66,8 +65,7 @@ impl Agent {
             info: agent_info,
             create_time: SystemTime::now(),
             services,
-            duration_s: 0,
-            service_refresh_time: SystemTime::now(),
+            last_refresh: SystemTime::now(),
         }
     }
 
@@ -127,7 +125,7 @@ impl Manager {
     pub fn agent_update_service_status(&mut self, guid: &str, services: &[Service]) {
         if let Some(agent) = self.agents.iter_mut().find(|agent| agent.info.guid == guid) {
             agent.services = services.to_owned();
-            agent.service_refresh_time = SystemTime::now();
+            agent.last_refresh = SystemTime::now();
         }
     }
 
@@ -149,7 +147,7 @@ impl Manager {
     pub fn agent_get_earliest_refreshed(&self) -> Option<&Agent> {
         self.agents
             .iter()
-            .min_by_key(|agent| agent.service_refresh_time)
+            .min_by_key(|agent| agent.last_refresh)
     }
 
     pub fn agent_delete(&mut self, guid: &str) {
