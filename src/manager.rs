@@ -74,26 +74,26 @@ impl Agent {
             service.alive = false;
         }
     }
+
     pub fn update_service_status(&mut self) {
-        let duration = SystemTime::now()
-            .duration_since(self.create_time)
-            .ok()
-            .unwrap()
-            .as_secs();
-        if duration > 310 {
-            self.clear_service_status();
-            return;
-        }
+        self.clear_service_status();
         self.services
             .par_iter_mut()
             .for_each(|service| service.alive = is_port_on(&self.info.bmc_ip, service.port));
+    }
+
+    pub fn age(&self) -> u64 {
+        SystemTime::now()
+            .duration_since(self.last_refresh)
+            .ok()
+            .unwrap()
+            .as_secs()
     }
 }
 
 #[derive(Clone, Default, Serialize)]
 pub struct Manager {
     pub agents: Vec<Agent>,
-    pub waiting_udate: Vec<String>,
 }
 
 impl Manager {
@@ -113,13 +113,13 @@ impl Manager {
                 && self.agents[i].info.name == agent.info.name
             {
                 self.agents.remove(i);
+                break;
             } else {
                 i += 1;
             }
         }
-        self.waiting_udate.insert(0, agent.info.guid.clone());
-        self.agents.insert(0, agent);
-        self.agents[0].clone()
+        self.agents.push(agent);
+        self.agents.last().unwrap().clone()
     }
 
     pub fn agent_update_service_status(&mut self, guid: &str, services: &[Service]) {
@@ -144,10 +144,10 @@ impl Manager {
             .map(|x| x.to_owned())
     }
 
-    pub fn agent_get_earliest_refreshed(&self) -> Option<&Agent> {
+    pub fn agent_get_next_need_refresh(&self) -> Option<&Agent> {
         self.agents
             .iter()
-            .min_by_key(|agent| agent.last_refresh)
+            .max_by_key(|agent| agent.age())
     }
 
     pub fn agent_delete(&mut self, guid: &str) {
