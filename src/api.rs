@@ -8,11 +8,11 @@ use serde_derive::{Deserialize, Serialize};
 
 use rocket_dyn_templates::Template;
 
-use crate::manager::Agent;
+use crate::manager::{Agent as CoreAgent, Service};
 use crate::manager::AgentInfo as CoreAgentInfo;
 use crate::Managed;
 
-#[derive(FromForm, Serialize, Deserialize)]
+#[derive(Clone, Debug, FromForm, Serialize, Deserialize)]
 pub struct AgentInfo {
     pub guid: String,
     pub name: String,
@@ -31,22 +31,58 @@ impl Into<CoreAgentInfo> for AgentInfo {
     }
 }
 
+impl From<CoreAgentInfo> for AgentInfo {
+    fn from(value: CoreAgentInfo) -> Self {
+        Self {
+            guid: value.guid,
+            name: value.name,
+            ip: value.ip,
+            bmc_ip: value.bmc_ip,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Agent {
+    pub info: AgentInfo,
+    pub create_time: SystemTime,
+    pub duration_s: u64,
+    pub services: Vec<Service>,
+    pub service_refresh_time: SystemTime,
+}
+
+impl From<CoreAgent> for Agent {
+    fn from(agent: CoreAgent) -> Self {
+        Self {
+            info: agent.info.into(),
+            create_time: agent.create_time,
+            duration_s: SystemTime::now()
+                .duration_since(agent.create_time)
+                .ok()
+                .unwrap()
+                .as_secs(),
+            services: agent.services,
+            service_refresh_time: agent.service_refresh_time,
+        }
+    }
+}
+
 #[post("/agents", data = "<agent>")]
 pub fn api_agent_create(agent: Form<AgentInfo>, state: &State<Managed>) -> Json<Agent> {
     let mut managed = state.write();
-    Json(managed.agent_create(agent.into_inner().into()))
+    Json(managed.agent_create(agent.into_inner().into()).into())
 }
 
 #[post("/agents", data = "<agent>", format = "application/json", rank = 2)]
 pub fn api_agent_create_with_json(agent: Json<AgentInfo>, state: &State<Managed>) -> Json<Agent> {
     let mut managed = state.write();
-    Json(managed.agent_create(agent.into_inner().into()))
+    Json(managed.agent_create(agent.into_inner().into()).into())
 }
 
 #[get("/agents", format = "application/json")]
 pub fn api_agent_list(state: &State<Managed>) -> Json<Vec<Agent>> {
     let managed = state.read();
-    Json(managed.agent_get_all())
+    Json(managed.agent_get_all().into_iter().map(|x| x.into()).collect())
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -57,14 +93,7 @@ struct Info {
 #[get("/agents", format = "text/html", rank = 2)]
 pub fn api_agent_list_html(state: &State<Managed>) -> Template {
     let managed = state.read();
-    let mut agents = managed.agent_get_all();
-    for agent in &mut agents {
-        agent.duration_s = SystemTime::now()
-            .duration_since(agent.create_time)
-            .ok()
-            .unwrap()
-            .as_secs();
-    }
+    let agents = managed.agent_get_all().into_iter().map(|x| x.into()).collect();
     Template::render("agents", &Info { agents })
 }
 
