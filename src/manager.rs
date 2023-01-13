@@ -3,12 +3,11 @@ use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 
 use log::debug;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Serialize;
 
 use rayon::prelude::*;
-use rocket::form::FromForm;
 
-#[derive(FromForm, Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct AgentInfo {
     pub guid: String,
     pub name: String,
@@ -16,7 +15,7 @@ pub struct AgentInfo {
     pub bmc_ip: String,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct Service {
     pub name: String,
     pub port: u16,
@@ -33,7 +32,7 @@ impl Service {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Agent {
     pub info: AgentInfo,
     pub create_time: SystemTime,
