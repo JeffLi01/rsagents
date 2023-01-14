@@ -18,7 +18,7 @@
           <th>Name</th>
           <th>IP</th>
           <th>BMC IP</th>
-          <th>Since Last Update</th>
+          <th>Last Update</th>
           <th colspan="5">BMC Services</th>
         </tr>
       </thead>
@@ -31,7 +31,7 @@
               <td>{{ agent.info.name }}</td>
               <td>{{ agent.info.ip }}</td>
               <td>{{ agent.info.bmc_ip }}</td>
-              <td bgcolor="{% if agent.duration_since_refresh_s > 300 %}#ff0000{% else %}#00ff00{% endif %}">{{ agent.duration_since_refresh_s }}</td>
+              <td>{{ agent.last_refresh | date(format="%Y/%m/%d %H:%M:%S") }}</td>
               {% for service in agent.services %}
                 <td width="50" align="center">{% if service.alive %}<a href="{{ service.name }}://{{ agent.info.bmc_ip }}">{{ service.name }}</a>{% endif %}</td>
               {% endfor %}

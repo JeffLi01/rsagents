@@ -37,7 +37,7 @@ pub struct Agent {
     pub info: AgentInfo,
     pub create_time: SystemTime,
     pub services: Vec<Service>,
-    pub last_refresh: SystemTime,
+    pub last_refresh: Option<SystemTime>,
 }
 
 fn is_port_on(ip: &str, port: u16) -> bool {
@@ -65,7 +65,7 @@ impl Agent {
             info: agent_info,
             create_time: SystemTime::now(),
             services,
-            last_refresh: SystemTime::now(),
+            last_refresh: None,
         }
     }
 
@@ -82,12 +82,37 @@ impl Agent {
             .for_each(|service| service.alive = is_port_on(&self.info.bmc_ip, service.port));
     }
 
-    pub fn age(&self) -> u64 {
-        SystemTime::now()
-            .duration_since(self.last_refresh)
+    pub fn age(&self, now: SystemTime) -> u64 {
+        let time = match self.last_refresh {
+            Some(t) => t,
+            None => self.create_time - Duration::from_secs(300),
+        };
+        now.duration_since(time)
             .ok()
             .unwrap()
             .as_secs()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::time::SystemTime;
+
+    use super::{AgentInfo, Agent};
+
+    #[test]
+    fn test_age() {
+        let info = AgentInfo {
+            guid: "guid".into(),
+            name: "name".into(),
+            ip: "ip".into(),
+            bmc_ip: "bmc_ip".into(),
+        };
+        let mut agent = Agent::new(info);
+        let now = SystemTime::now();
+        assert!(agent.age(now) >= 300);
+        agent.last_refresh = Some(now);
+        assert_eq!(agent.age(now), 0);
     }
 }
 
@@ -125,7 +150,7 @@ impl Manager {
     pub fn agent_update_service_status(&mut self, guid: &str, services: &[Service]) {
         if let Some(agent) = self.agents.iter_mut().find(|agent| agent.info.guid == guid) {
             agent.services = services.to_owned();
-            agent.last_refresh = SystemTime::now();
+            agent.last_refresh = Some(SystemTime::now());
         }
     }
 
@@ -145,9 +170,10 @@ impl Manager {
     }
 
     pub fn agent_get_next_need_refresh(&self) -> Option<&Agent> {
+        let now = SystemTime::now();
         self.agents
             .iter()
-            .max_by_key(|agent| agent.age())
+            .max_by_key(|agent| agent.age(now))
     }
 
     pub fn agent_delete(&mut self, guid: &str) {

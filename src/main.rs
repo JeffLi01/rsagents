@@ -37,9 +37,7 @@ fn update_service_status(managed: Managed) {
         }
 
         let agent = agent.unwrap();
-        let duration = agent.age();
-
-        if duration < 300 {
+        if agent.age(SystemTime::now()) < 300 {
             trace!("update_service_status: no agent needs update");
             sleep(Duration::new(1, 0));
             continue;

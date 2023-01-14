@@ -45,22 +45,29 @@ impl From<CoreAgentInfo> for AgentInfo {
 #[derive(Clone, Debug, Serialize)]
 pub struct Agent {
     pub info: AgentInfo,
-    pub create_time: SystemTime,
-    pub duration_since_refresh_s: u64,
+    pub create_time: u64,
+    pub last_refresh: Option<u64>,
     pub services: Vec<Service>,
 }
 
 impl From<CoreAgent> for Agent {
     fn from(agent: CoreAgent) -> Self {
+        let create_time = agent.create_time
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .ok()
+            .unwrap()
+            .as_secs();
+        let last_refresh = agent.last_refresh.map(|x| x
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .ok()
+            .unwrap()
+            .as_secs()
+        );
         Self {
             info: agent.info.into(),
-            create_time: agent.create_time,
-            duration_since_refresh_s: SystemTime::now()
-                .duration_since(agent.last_refresh)
-                .ok()
-                .unwrap()
-                .as_secs(),
             services: agent.services,
+            create_time,
+            last_refresh,
         }
     }
 }
