@@ -82,15 +82,12 @@ impl Agent {
             .for_each(|service| service.alive = is_port_on(&self.info.bmc_ip, service.port));
     }
 
-    pub fn age(&self, now: SystemTime) -> u64 {
-        let time = match self.last_refresh {
-            Some(t) => t,
-            None => self.create_time - Duration::from_secs(300),
-        };
-        now.duration_since(time)
+    pub fn age(&self, now: SystemTime) -> Option<u64> {
+        self.last_refresh.map(|x| now.duration_since(x)
             .ok()
             .unwrap()
             .as_secs()
+        )
     }
 }
 
@@ -110,20 +107,22 @@ mod test {
         };
         let mut agent = Agent::new(info);
         let now = SystemTime::now();
-        assert!(agent.age(now) >= 300);
+        assert_eq!(agent.age(now), None);
         agent.last_refresh = Some(now);
-        assert_eq!(agent.age(now), 0);
+        assert_eq!(agent.age(now), Some(0));
     }
 }
 
 #[derive(Clone, Default, Serialize)]
 pub struct Manager {
     pub agents: Vec<Agent>,
+    pub refresh_interval_s: u64,
 }
 
 impl Manager {
     pub fn new() -> Self {
         Self {
+            refresh_interval_s: 300,
             ..Default::default()
         }
     }
@@ -169,11 +168,16 @@ impl Manager {
             .map(|x| x.to_owned())
     }
 
+    pub fn agent_needs_refresh(&self, agent: &Agent, now: SystemTime) -> bool {
+        self.agent_priority(agent, now) > self.refresh_interval_s
+    }
+
     pub fn agent_get_next_need_refresh(&self) -> Option<&Agent> {
         let now = SystemTime::now();
         self.agents
             .iter()
-            .max_by_key(|agent| agent.age(now))
+            .filter(|agent| self.agent_needs_refresh(agent, now))
+            .max_by_key(|agent| self.agent_priority(agent, now))
     }
 
     pub fn agent_delete(&mut self, guid: &str) {
@@ -186,5 +190,18 @@ impl Manager {
         self.agents
             .par_iter_mut()
             .for_each(|agent| agent.update_service_status());
+    }
+
+    pub fn agent_priority(&self, agent: &Agent, now: SystemTime) -> u64 {
+        match agent.age(now) {
+            Some(age) => age,
+            None => {
+                let elapsed_since_created = now.duration_since(agent.create_time)
+                    .ok()
+                    .unwrap()
+                    .as_secs();
+                elapsed_since_created + self.refresh_interval_s
+            }
+        }
     }
 }

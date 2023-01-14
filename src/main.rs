@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::thread::{self, sleep};
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 use log::trace;
 use rocket::launch;
@@ -37,12 +37,6 @@ fn update_service_status(managed: Managed) {
         }
 
         let agent = agent.unwrap();
-        if agent.age(SystemTime::now()) < 300 {
-            trace!("update_service_status: no agent needs update");
-            sleep(Duration::new(1, 0));
-            continue;
-        }
-
         trace!("update_service_status: refreshing {}", agent.info.guid);
         let mut agent = agent;
         agent.update_service_status();
