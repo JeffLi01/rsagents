@@ -32,7 +32,7 @@ impl Service {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug)]
 pub struct Agent {
     pub info: AgentInfo,
     pub create_time: SystemTime,
@@ -54,19 +54,26 @@ fn is_port_on(ip: &str, port: u16) -> bool {
 
 impl Agent {
     pub fn new(agent_info: AgentInfo) -> Self {
-        let services = vec![
-            Service::new("http".to_string(), 80),
-            Service::new("https".to_string(), 443),
-            Service::new("ssh".to_string(), 22),
-            Service::new("ipmi".to_string(), 623),
-            Service::new("vnc".to_string(), 5900),
-        ];
-        Agent {
+        let mut agent = Agent {
             info: agent_info,
             create_time: SystemTime::now(),
-            services,
+            services: vec![],
             last_refresh: None,
+        };
+        for (name, port) in vec![
+            ("http", 80),
+            ("https", 443),
+            ("ssh", 22),
+            ("ipmi", 623),
+            ("vnc", 5900),
+        ] {
+            agent.monitor_service(name, port);
         }
+        agent
+    }
+
+    fn monitor_service(&mut self, name: &str, port: u16) {
+        self.services.push(Service::new(name.to_string(), port));
     }
 
     fn clear_service_status(&mut self) {
@@ -113,7 +120,7 @@ mod test {
     }
 }
 
-#[derive(Clone, Default, Serialize)]
+#[derive(Clone, Default)]
 pub struct Manager {
     pub agents: Vec<Agent>,
     pub refresh_interval_s: u64,
