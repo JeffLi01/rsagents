@@ -3,11 +3,15 @@ use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 
 use log::debug;
+use serde::Deserialize;
 use serde_derive::Serialize;
+use serde_json::{self, json};
 
 use rayon::prelude::*;
 
-#[derive(Clone, Debug, Serialize)]
+use rsagents::{Error, Load, Store};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AgentInfo {
     pub guid: String,
     pub name: String,
@@ -132,6 +136,21 @@ impl Manager {
             refresh_interval_s: 300,
             ..Default::default()
         }
+    }
+
+    pub fn load(&mut self, storage: &impl Load) -> Result<(), Error> {
+        let s = storage.load()?;
+        let agent_infos: Vec<AgentInfo> = serde_json::from_str(&s)?;
+        for agent_info in agent_infos {
+            let _ = self.agent_create(agent_info);
+        }
+        Ok(())
+    }
+
+    pub fn store(&self, storage: &impl Store) -> Result<(), Error> {
+        let agent_infos: Vec<AgentInfo> = self.agents.iter().map(|x| x.info.clone()).collect();
+        storage.store(&serde_json::to_string_pretty(&json!(agent_infos))?)?;
+        Ok(())
     }
 }
 
