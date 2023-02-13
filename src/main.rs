@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::thread::{self, sleep};
 use std::time::Duration;
 
-use log::trace;
+use log::{trace, error};
 use rocket::fairing::AdHoc;
 use rocket::launch;
 use rocket_dyn_templates::Template;
@@ -90,7 +90,7 @@ pub fn rocket_app() -> _ {
     match manager.load(&storage) {
         Ok(_) => {},
         Err(err) => {
-            eprintln!("{:?}", err);
+            error!("{:?}", err);
         },
     }
     let state = Arc::new(RwLock::new(manager));
@@ -110,7 +110,7 @@ pub fn rocket_app() -> _ {
             match managed.read().store(&storage) {
                 Ok(_) => {},
                 Err(err) => {
-                    eprintln!("{:?}", err);
+                    error!("{:?}", err);
                 }
             }
         })))

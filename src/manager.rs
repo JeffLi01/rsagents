@@ -1,7 +1,8 @@
 use std::net::{SocketAddr, TcpStream};
 use std::str::FromStr;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
+use chrono::{DateTime, Local};
 use log::debug;
 use serde::Deserialize;
 use serde_derive::Serialize;
@@ -39,9 +40,9 @@ impl Service {
 #[derive(Clone, Debug)]
 pub struct Agent {
     pub info: AgentInfo,
-    pub create_time: SystemTime,
+    pub create_time: DateTime<Local>,
     pub services: Vec<Service>,
-    pub last_refresh: Option<SystemTime>,
+    pub last_refresh: Option<DateTime<Local>>,
 }
 
 fn is_port_on(ip: &str, port: u16) -> bool {
@@ -60,7 +61,7 @@ impl Agent {
     pub fn new(agent_info: AgentInfo) -> Self {
         let mut agent = Agent {
             info: agent_info,
-            create_time: SystemTime::now(),
+            create_time: Local::now(),
             services: vec![],
             last_refresh: None,
         };
@@ -93,18 +94,14 @@ impl Agent {
             .for_each(|service| service.alive = is_port_on(&self.info.bmc_ip, service.port));
     }
 
-    pub fn age(&self, now: SystemTime) -> Option<u64> {
-        self.last_refresh.map(|x| now.duration_since(x)
-            .ok()
-            .unwrap()
-            .as_secs()
-        )
+    pub fn age(&self, now: DateTime<Local>) -> Option<i64> {
+        self.last_refresh.map(|x| (now - x).num_seconds())
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::time::SystemTime;
+    use chrono::Local;
 
     use super::{AgentInfo, Agent};
 
@@ -117,7 +114,7 @@ mod test {
             bmc_ip: "bmc_ip".into(),
         };
         let mut agent = Agent::new(info);
-        let now = SystemTime::now();
+        let now = Local::now();
         assert_eq!(agent.age(now), None);
         agent.last_refresh = Some(now);
         assert_eq!(agent.age(now), Some(0));
@@ -127,7 +124,7 @@ mod test {
 #[derive(Clone, Default)]
 pub struct Manager {
     pub agents: Vec<Agent>,
-    pub refresh_interval_s: u64,
+    pub refresh_interval_s: i64,
 }
 
 impl Manager {
@@ -175,7 +172,7 @@ impl Manager {
     pub fn agent_update_service_status(&mut self, guid: &str, services: &[Service]) {
         if let Some(agent) = self.agents.iter_mut().find(|agent| agent.info.guid == guid) {
             agent.services = services.to_owned();
-            agent.last_refresh = Some(SystemTime::now());
+            agent.last_refresh = Some(Local::now());
         }
     }
 
@@ -194,12 +191,12 @@ impl Manager {
             .map(|x| x.to_owned())
     }
 
-    pub fn agent_needs_refresh(&self, agent: &Agent, now: SystemTime) -> bool {
+    pub fn agent_needs_refresh(&self, agent: &Agent, now: DateTime<Local>) -> bool {
         self.agent_priority(agent, now) > self.refresh_interval_s
     }
 
     pub fn agent_get_next_need_refresh(&self) -> Option<&Agent> {
-        let now = SystemTime::now();
+        let now = Local::now();
         self.agents
             .iter()
             .filter(|agent| self.agent_needs_refresh(agent, now))
@@ -218,15 +215,12 @@ impl Manager {
             .for_each(|agent| agent.update_service_status());
     }
 
-    pub fn agent_priority(&self, agent: &Agent, now: SystemTime) -> u64 {
+    pub fn agent_priority(&self, agent: &Agent, now: DateTime<Local>) -> i64 {
         match agent.age(now) {
             Some(age) => age,
             None => {
-                let elapsed_since_created = now.duration_since(agent.create_time)
-                    .ok()
-                    .unwrap()
-                    .as_secs();
-                elapsed_since_created + self.refresh_interval_s
+                let elapsed_since_created = now - agent.create_time;
+                elapsed_since_created.num_seconds() + self.refresh_interval_s
             }
         }
     }

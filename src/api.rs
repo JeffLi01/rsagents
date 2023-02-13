@@ -1,5 +1,4 @@
-use std::time::SystemTime;
-
+use chrono::SecondsFormat;
 use rocket::form::Form;
 use rocket::serde::json::Json;
 use rocket::{get, post, FromForm};
@@ -45,29 +44,20 @@ impl From<CoreAgentInfo> for AgentInfo {
 #[derive(Clone, Debug, Serialize)]
 pub struct Agent {
     pub info: AgentInfo,
-    pub create_time: u64,
-    pub last_refresh: Option<u64>,
+    pub create_time: String,
+    pub last_refresh: Option<String>,
     pub services: Vec<Service>,
 }
 
 impl From<CoreAgent> for Agent {
     fn from(agent: CoreAgent) -> Self {
-        let create_time = agent.create_time
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .ok()
-            .unwrap()
-            .as_secs();
-        let last_refresh = agent.last_refresh.map(|x| x
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .ok()
-            .unwrap()
-            .as_secs()
-        );
+        let last_refresh = agent.last_refresh.map(|x| x.to_rfc3339_opts(SecondsFormat::Secs, true));
+        let create_time = agent.create_time.to_rfc3339_opts(SecondsFormat::Secs, true);
         Self {
             info: agent.info.into(),
             services: agent.services,
-            create_time,
             last_refresh,
+            create_time,
         }
     }
 }

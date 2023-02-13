@@ -31,7 +31,7 @@
               <td>{{ agent.info.name }}</td>
               <td>{{ agent.info.ip }}</td>
               <td>{{ agent.info.bmc_ip }}</td>
-              <td>{% if agent.last_refresh %}{{ agent.last_refresh | date(format="%Y/%m/%d %H:%M:%S") }}{% else %}NA{% endif %}</td>
+              <td>{% if agent.last_refresh %}{{ agent.last_refresh }}{% else %}NA{% endif %}</td>
               {% for service in agent.services %}
                 <td width="50" align="center">{% if service.alive %}<a href="{{ service.name }}://{{ agent.info.bmc_ip }}">{{ service.name }}</a>{% endif %}</td>
               {% endfor %}
