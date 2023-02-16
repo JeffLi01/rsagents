@@ -15,6 +15,7 @@ use rsagents::{Load, Error, Store};
 
 mod api;
 mod manager;
+mod html;
 
 pub struct Managed {
     state: Arc<RwLock<Manager>>,
@@ -103,6 +104,7 @@ pub fn rocket_app() -> _ {
     };
     rocket::build()
         .mount("/", api::get_routes())
+        .mount("/", html::get_routes())
         .manage(managed)
         .attach(Template::fairing())
         .attach(AdHoc::on_shutdown("Store agents", |inst| Box::pin(async move {
