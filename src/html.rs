@@ -1,6 +1,4 @@
-use std::path::Path;
-
-use rocket::{fs::NamedFile, get, Route, routes};
+use rocket::{get, Route, routes};
 
 pub fn get_routes() -> Vec<Route> {
     routes![
@@ -9,6 +7,6 @@ pub fn get_routes() -> Vec<Route> {
 }
 
 #[get("/favicon.ico", format = "image/*")]
-pub async fn html_icon() -> Option<NamedFile> {
-    NamedFile::open(Path::new("favicon.ico")).await.ok()
+pub fn html_icon() -> Option<&'static [u8]> {
+    Some(include_bytes!("images/favicon.ico"))
 }
